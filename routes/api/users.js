@@ -6,6 +6,10 @@ const jwt = require("jsonwebtoken");
 const keys = require("../../config/keys");
 const passport = require("passport");
 
+// Load Input validation
+const validateRegisterInput = require("../../validation/register");
+const validateLoginInput = require("../../validation/login");
+
 // Load the User Model
 const User = require("../../models/User");
 
@@ -19,6 +23,12 @@ router.get("/test", (req, res) => {
   @access   Public
 */
 router.post("/register", (req, res) => {
+  // vaidation
+  const { isValid, errors } = validateRegisterInput(req.body);
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
   User.findOne({ email: req.body.email })
     .then(user => {
       if (user) {
@@ -63,6 +73,12 @@ router.post("/register", (req, res) => {
   @access   Public
 */
 router.post("/login", (req, res) => {
+  // vaidation
+  const { isValid, errors } = validateLoginInput(req.body);
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
   const email = req.body.email;
   const password = req.body.password;
 
@@ -70,7 +86,8 @@ router.post("/login", (req, res) => {
   User.findOne({ email }).then(user => {
     //Check for user
     if (!user) {
-      return res.status(400).json({ email: "User not found" });
+      errors.email = "User not found";
+      return res.status(400).json(errors);
     } else {
       //check password
       bcrypt.compare(password, user.password).then(isMatch => {
@@ -85,12 +102,14 @@ router.post("/login", (req, res) => {
             { expiresIn: 3600 },
             (err, token) => {
               res.json({
-                success: "Bearer " + token
+                success: true,
+                token: "Bearer " + token
               });
             }
           );
         } else {
-          return res.status(400).json({ password: "Incorrect Password!" });
+          errors.password = "Incorrect Password!";
+          return res.status(400).json(errors);
         }
       });
     }
